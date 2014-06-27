@@ -39,8 +39,7 @@ class Slider
 
 
     #Slider sizing variables and settings
-    @getBrowserPrefix()
-    @transitionProperty = "#{@cssPrefix}-transition-duration"
+
     @setSlider()
 
     @index = 0
@@ -123,8 +122,9 @@ class Slider
     @rightLimit = (@viewPortWidth * @elementsQ) - @viewPortWidth #
     @$sliderItems.css 'width', "#{sliderItemWidth}%"
 
-    @$slider.css('width', "#{@sliderWidth}%")
-    @$slider.css("#{@transitionProperty}", "#{@settings.duration}s")
+    @$slider.css
+     'width': "#{@sliderWidth}%"
+     'transition-duration': "#{@settings.duration}s"
 
 
 
@@ -137,11 +137,11 @@ class Slider
     @draggedEl = e.currentTarget
     @slideToPos = @$slider.position().left
 
-    @$slider.css(@transitionProperty, '0s') # We are doing direct manipulation, no need for transitions here
-
     dragPos = (@slideToPos / @viewPortWidth) * 100
 
-    @$slider.css('left', dragPos + '%')
+    @$slider.css
+      'left': "#{dragPos}%"
+      'transition-duration': '0s' # We are doing direct manipulation, no need for transitions here
 
     $el.on 'mousemove', (ev)=>
 
@@ -271,39 +271,12 @@ class Slider
       @$sliderNavBtns.removeClass 'selectedBullet'
       $(@$sliderNavBtns[@index]).addClass 'selectedBullet'
 
-    #@$slider.stop().animate({'left': @slideToPos + '%'}, @settings.duration)
-    @$slider.css('left', "#{@slideToPos}%")
-    @$slider.css("#{@transitionProperty}", "#{@settings.duration}s")
+    @$slider.css
+      'left': "#{@slideToPos}%"
+      'transition-duration': "#{@settings.duration}s"
 
     if(@settings.emmitEvents)
       $.event.trigger('onSlide', [@index, @sliderId]);
-
-  getBrowserPrefix: ->
-
-    #Based on the browserprefix function found in http://css-tricks.com/controlling-css-animations-transitions-javascript/
-    @cssPrefix = 'webkit'
-    ###N = navigator.appName
-    ua = navigator.userAgent
-    M = ua.match(/(opera|chrome|safari|firefox|msie)\/?\s*(\.?\d+(\.\d+)*)/i)
-
-    if(M && (tem = ua.match(/version\/([\.\d]+)/i))!= null)
-      M[2] = tem[1]
-    M = if M [M[1], M[2]] then [N, navigator.appVersion,'-?']
-    M = M[0]
-
-    if(M is "Chrome") then browserPrefix = 'webkit'
-    if(M is "Firefox") then browserPrefix = 'moz'
-    if(M is "Safari") then browserPrefix = 'webkit'
-    if(M is "MSIE") then browserPrefix = 'ms'###
-
-    return @cssPrefix
-
-
-###
-@$slider.stop().css({
-  '-webkit-transform': "translate3d(#{@slideToPos}%, 0px, 0px) perspective(2000px)"
-})
-###
 
 $ ->
   sliders.main = new Slider 'mainSlider',

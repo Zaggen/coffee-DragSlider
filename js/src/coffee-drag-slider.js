@@ -43,8 +43,6 @@
       } else {
         this.$sliderNavBtns = $(this.$sliderViewport.children('.navigator').children());
       }
-      this.getBrowserPrefix();
-      this.transitionProperty = "" + this.cssPrefix + "-transition-duration";
       this.setSlider();
       this.index = 0;
       this.slideToPos = 0;
@@ -134,8 +132,10 @@
       sliderItemWidth = 100 / this.elementsQ;
       this.rightLimit = (this.viewPortWidth * this.elementsQ) - this.viewPortWidth;
       this.$sliderItems.css('width', "" + sliderItemWidth + "%");
-      this.$slider.css('width', "" + this.sliderWidth + "%");
-      this.$slider.css("" + this.transitionProperty, "" + this.settings.duration + "s");
+      this.$slider.css({
+        'width': "" + this.sliderWidth + "%",
+        'transition-duration': "" + this.settings.duration + "s"
+      });
       return this.addNavigator();
     };
 
@@ -146,9 +146,11 @@
       startX = e.pageX;
       this.draggedEl = e.currentTarget;
       this.slideToPos = this.$slider.position().left;
-      this.$slider.css(this.transitionProperty, '0s');
       dragPos = (this.slideToPos / this.viewPortWidth) * 100;
-      this.$slider.css('left', dragPos + '%');
+      this.$slider.css({
+        'left': "" + dragPos + "%",
+        'transition-duration': '0s'
+      });
       return $el.on('mousemove', (function(_this) {
         return function(ev) {
           var offsetX;
@@ -276,43 +278,18 @@
         this.$sliderNavBtns.removeClass('selectedBullet');
         $(this.$sliderNavBtns[this.index]).addClass('selectedBullet');
       }
-      this.$slider.css('left', "" + this.slideToPos + "%");
-      this.$slider.css("" + this.transitionProperty, "" + this.settings.duration + "s");
+      this.$slider.css({
+        'left': "" + this.slideToPos + "%",
+        'transition-duration': "" + this.settings.duration + "s"
+      });
       if (this.settings.emmitEvents) {
         return $.event.trigger('onSlide', [this.index, this.sliderId]);
       }
     };
 
-    Slider.prototype.getBrowserPrefix = function() {
-      this.cssPrefix = 'webkit';
-
-      /*N = navigator.appName
-      ua = navigator.userAgent
-      M = ua.match(/(opera|chrome|safari|firefox|msie)\/?\s*(\.?\d+(\.\d+)*)/i)
-      
-      if(M && (tem = ua.match(/version\/([\.\d]+)/i))!= null)
-        M[2] = tem[1]
-      M = if M [M[1], M[2]] then [N, navigator.appVersion,'-?']
-      M = M[0]
-      
-      if(M is "Chrome") then browserPrefix = 'webkit'
-      if(M is "Firefox") then browserPrefix = 'moz'
-      if(M is "Safari") then browserPrefix = 'webkit'
-      if(M is "MSIE") then browserPrefix = 'ms'
-       */
-      return this.cssPrefix;
-    };
-
     return Slider;
 
   })();
-
-
-  /*
-  @$slider.stop().css({
-    '-webkit-transform': "translate3d(#{@slideToPos}%, 0px, 0px) perspective(2000px)"
-  })
-   */
 
   $(function() {
     return sliders.main = new Slider('mainSlider', {
