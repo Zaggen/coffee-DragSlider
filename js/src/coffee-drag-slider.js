@@ -10,7 +10,7 @@
 
   Slider = (function() {
     function Slider(sliderId, config) {
-      var _ref, _ref1, _ref10, _ref11, _ref12, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
+      var _ref, _ref1, _ref10, _ref11, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8, _ref9;
       this.sliderId = sliderId;
       if (config == null) {
         config = {};
@@ -25,11 +25,10 @@
         navigator: (_ref5 = config.navigator) != null ? _ref5 : false,
         navigatorEvents: (_ref6 = config.navigatorEvents) != null ? _ref6 : false,
         autoHideBtns: (_ref7 = config.autoHideBtns) != null ? _ref7 : true,
-        duration: (_ref8 = config.duration) != null ? _ref8 : 1000,
+        duration: (_ref8 = config.duration) != null ? _ref8 : 1,
         emmitEvents: (_ref9 = config.emmitEvents) != null ? _ref9 : false,
         draggable: (_ref10 = config.draggable) != null ? _ref10 : true,
-        timingClass: (_ref11 = config.timingClass) != null ? _ref11 : 'trans_point8Sec',
-        preventLinksOnDrag: (_ref12 = config.allowLinks) != null ? _ref12 : true
+        preventLinksOnDrag: (_ref11 = config.allowLinks) != null ? _ref11 : true
       };
       this.$sliderViewport = $('#' + sliderId);
       this.$slider = $(this.$sliderViewport.children('.slider'));
@@ -44,6 +43,8 @@
       } else {
         this.$sliderNavBtns = $(this.$sliderViewport.children('.navigator').children());
       }
+      this.getBrowserPrefix();
+      this.transitionProperty = "" + this.cssPrefix + "-transition-duration";
       this.setSlider();
       this.index = 0;
       this.slideToPos = 0;
@@ -133,7 +134,8 @@
       sliderItemWidth = 100 / this.elementsQ;
       this.rightLimit = (this.viewPortWidth * this.elementsQ) - this.viewPortWidth;
       this.$sliderItems.css('width', "" + sliderItemWidth + "%");
-      this.$slider.css('width', "" + this.sliderWidth + "%").addClass(this.settings.timingClass);
+      this.$slider.css('width', "" + this.sliderWidth + "%");
+      this.$slider.css("" + this.transitionProperty, "" + this.settings.duration + "s");
       return this.addNavigator();
     };
 
@@ -144,7 +146,7 @@
       startX = e.pageX;
       this.draggedEl = e.currentTarget;
       this.slideToPos = this.$slider.position().left;
-      this.$slider.removeClass(this.settings.timingClass);
+      this.$slider.css(this.transitionProperty, '0s');
       dragPos = (this.slideToPos / this.viewPortWidth) * 100;
       this.$slider.css('left', dragPos + '%');
       return $el.on('mousemove', (function(_this) {
@@ -274,11 +276,31 @@
         this.$sliderNavBtns.removeClass('selectedBullet');
         $(this.$sliderNavBtns[this.index]).addClass('selectedBullet');
       }
-      this.$slider.addClass(this.settings.timingClass);
-      this.$slider.css('left', this.slideToPos + '%');
+      this.$slider.css('left', "" + this.slideToPos + "%");
+      this.$slider.css("" + this.transitionProperty, "" + this.settings.duration + "s");
       if (this.settings.emmitEvents) {
         return $.event.trigger('onSlide', [this.index, this.sliderId]);
       }
+    };
+
+    Slider.prototype.getBrowserPrefix = function() {
+      this.cssPrefix = 'webkit';
+
+      /*N = navigator.appName
+      ua = navigator.userAgent
+      M = ua.match(/(opera|chrome|safari|firefox|msie)\/?\s*(\.?\d+(\.\d+)*)/i)
+      
+      if(M && (tem = ua.match(/version\/([\.\d]+)/i))!= null)
+        M[2] = tem[1]
+      M = if M [M[1], M[2]] then [N, navigator.appVersion,'-?']
+      M = M[0]
+      
+      if(M is "Chrome") then browserPrefix = 'webkit'
+      if(M is "Firefox") then browserPrefix = 'moz'
+      if(M is "Safari") then browserPrefix = 'webkit'
+      if(M is "MSIE") then browserPrefix = 'ms'
+       */
+      return this.cssPrefix;
     };
 
     return Slider;

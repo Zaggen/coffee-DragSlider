@@ -3,14 +3,33 @@ html
   head
     meta(charset='utf8')
     title coffee-DragSlider Demo
-    link(rel='stylesheet', href='css/coffee-drag-slider.css')
+    link(rel='stylesheet', href='styles/coffee-drag-slider.css')
+    link(rel='stylesheet', href='//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.0.3/css/font-awesome.min.css')
   body
+    style.
+      .container {
+        max-width: 940px;
+        margin: auto;
+      }
+      .slider li{
+        height: 400px!important;
+        background: red;
+      }
+
+      .slider li:nth-of-type(2){
+        background: blue;
+      }
+
     .container
       .sliderViewport#mainSlider
+        .sliderBtn.prevBtn
+          i.fa.fa-angle-left
+        .sliderBtn.nextBtn
+          i.fa.fa-angle-right
         ul.slider
           li item-1
           li item-2
           li item-3
 
     script(src='//code.jquery.com/jquery-1.11.0.min.js')
-    script(src='js/coffee-drag-slider')
+    script(src='js/src/coffee-drag-slider.js')

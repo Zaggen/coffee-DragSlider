@@ -1,1 +1,13 @@
-<!DOCTYPE html5><html><head><meta charset="utf8"/><title>coffee-DragSlider Demo</title><link rel="stylesheet" href="css/coffee-drag-slider.css"/></head><body><div class="container"><div id="mainSlider" class="sliderViewport"><ul class="slider"><li>item-1</li><li>item-2</li><li>item-3</li></ul></div></div><script src="//code.jquery.com/jquery-1.11.0.min.js"></script><script src="js/coffee-drag-slider"></script></body></html>
+<!DOCTYPE html5><html><head><meta charset="utf8"/><title>coffee-DragSlider Demo</title><link rel="stylesheet" href="styles/coffee-drag-slider.css"/><link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.0.3/css/font-awesome.min.css"/></head><body><style>.container {
+  max-width: 940px;
+  margin: auto;
+}
+.slider li{
+  height: 400px!important;
+  background: red;
+}
+
+.slider li:nth-of-type(2){
+  background: blue;
+}
+</style><div class="container"><div id="mainSlider" class="sliderViewport"><div class="sliderBtn prevBtn"><i class="fa fa-angle-left"></i></div><div class="sliderBtn nextBtn"><i class="fa fa-angle-right"></i></div><ul class="slider"><li>item-1</li><li>item-2</li><li>item-3</li></ul></div></div><script src="//code.jquery.com/jquery-1.11.0.min.js"></script><script src="js/src/coffee-drag-slider.js"></script></body></html>
