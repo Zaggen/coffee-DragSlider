@@ -1,24 +1,22 @@
-root = window
-root.sliders = {}
-$ = root.jQuery
+window.sliders = {}
+$ = window.jQuery
 
 class Slider
   constructor:(@sliderId, config = {})->
-    $ = window.jQuery
 
     @settings =
       viewportMaxWidth:  config.viewportMaxWidth ? 1000
       viewportMaxHeight: config.viewportMaxHeight ? 500
-      slideShow:         config.slideShow ? yes
-      stopOnHover:       config.stopOnHover ? yes
-      cycle:             config.cycle ? yes
-      navigator:         config.navigator ? no
+    #slideShow:         config.slideShow ? yes # Not implemented yet
+    #stopOnHover:       config.stopOnHover ? yes # Not implemented yet
+    #cycle:             config.cycle ? yes # Not implemented yet
+      navigator:         config.navigator ? yes
       navigatorEvents:   config.navigatorEvents ? no
       autoHideBtns:      config.autoHideBtns ? yes # Not implemented yet
       duration:          config.duration ? 1 # In seconds
       emmitEvents:       config.emmitEvents ? no
       draggable:         config.draggable ? yes
-      preventLinksOnDrag:config.allowLinks ? yes
+    #preventLinksOnDrag:config.allowLinks ? yes
 
     #jQuery Objects
     @$sliderViewport   = $('#' + sliderId)
@@ -26,22 +24,16 @@ class Slider
     @$sliderItems      = $ @$slider.children('li')
     @$sliderPrevBtn    = $ @$sliderViewport.children('.prevBtn')
     @$sliderNextBtn    = $ @$sliderViewport.children('.nextBtn')
+    @$sliderNavBtns    = $ @$sliderViewport.children('.navigator').children()
 
     # In order to prevent any other link event handler to activate first we find the childrens and use those to
     # stop and Immediate Propagation of the event
     if @settings.preventLinksOnDrag
       @$sliderLinks = @$sliderItems.children().children()
 
-    if config.navigatorInParent?
-      @$sliderNavBtns    = $ @$sliderViewport.parent().find('.navigator a')
-    else
-      @$sliderNavBtns    = $ @$sliderViewport.children('.navigator').children()
-
-
     #Slider sizing variables and settings
 
     @setSlider()
-
     @index = 0
     @slideToPos = 0
     @draggedEl = null
@@ -75,9 +67,11 @@ class Slider
         null
 
       @$sliderViewport.on 'touchstart', (e)=>
+        e = e.originalEvent
+        x = e.touches[0].pageX
         e.stopPropagation()
         @draggedEl = e.currentTarget
-        @dragStart(e.pageX, 'touchmove')
+        @dragStart(x, 'touchmove')
         null
 
       # Removes mousemove ev when the mouse is up anywhere in
@@ -85,9 +79,13 @@ class Slider
       # if @dragStartX means the current object called by the handler
       # did not started the mousedown event so we skip it
 
-      $(document).on 'touchend mouseup',(e)=>
+      $(document).on 'mouseup',(e)=>
         e.stopPropagation()
         e.preventDefault()
+        @dragEnd(e.pageX)
+
+      $(document).on 'touchend',(e)=>
+        e = e.originalEvent.touches[0]
         @dragEnd(e.pageX)
 
     $( window ).resize =>
@@ -130,8 +128,8 @@ class Slider
     @$sliderItems.css 'width', "#{sliderItemWidth}%"
 
     @$slider.css
-     'width': "#{@sliderWidth}%"
-     'transition-duration': "#{@settings.duration}s"
+      'width': "#{@sliderWidth}%"
+      'transition-duration': "#{@settings.duration}s"
 
 
 
@@ -148,12 +146,13 @@ class Slider
       'transition-duration': '0s' # We are doing direct manipulation, no need for transitions here
 
     $el.on inputEvent, (ev)=>
-      @dragg(startX, ev.pageX, slideToPos)
+      ev = ev.originalEvent
+      x = if inputEvent is 'mousemove' then ev.pageX else ev.touches[0].pageX
+      @dragg(startX, x, slideToPos)
 
 
   dragg: (startX, currentX, slideToPos) =>
     offsetX = startX - currentX # Difference between the new mouse x pos and the previus one
-
     slideToPos -= offsetX
 
     # Refactor below asap
@@ -289,5 +288,3 @@ $ ->
   sliders.main = new Slider 'mainSlider',
     autoHideBtns: yes
     emmitEvents: yes
-    navigator: yes
-
