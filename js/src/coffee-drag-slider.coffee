@@ -67,10 +67,17 @@ class Slider
 
     # Drag
     if @settings.draggable
-      @$sliderViewport.mousedown (e)=>
+      @$sliderViewport.on 'mousedown', (e)=>
         e.stopPropagation()
         e.preventDefault()
-        @dragStart(e)
+        @draggedEl = e.currentTarget
+        @dragStart(e.pageX)
+        null
+
+      @$sliderViewport.on 'touchstart', (e)=>
+        e.stopPropagation()
+        @draggedEl = e.currentTarget
+        @dragStart(e.pageX, 'touchmove')
         null
 
       # Removes mousemove ev when the mouse is up anywhere in
@@ -78,10 +85,10 @@ class Slider
       # if @dragStartX means the current object called by the handler
       # did not started the mousedown event so we skip it
 
-      $(document).mouseup (e)=>
+      $(document).on 'touchend mouseup',(e)=>
         e.stopPropagation()
         e.preventDefault()
-        @dragEnd(e)
+        @dragEnd(e.pageX)
 
     $( window ).resize =>
       @setSlider()
@@ -130,59 +137,59 @@ class Slider
 
     @addNavigator()
 
-  dragStart: (e)->
-    $el = $ e.currentTarget
-    @dragStartX = e.pageX
-    startX = e.pageX
-    @draggedEl = e.currentTarget
-    @slideToPos = @$slider.position().left
-
-    dragPos = (@slideToPos / @viewPortWidth) * 100
+  dragStart: (startX, inputEvent = 'mousemove')->
+    $el = $ @draggedEl
+    @dragStartX = startX
+    slideToPos = @$slider.position().left
+    dragPos = (slideToPos / @viewPortWidth) * 100
 
     @$slider.css
       'left': "#{dragPos}%"
       'transition-duration': '0s' # We are doing direct manipulation, no need for transitions here
 
-    $el.on 'mousemove', (ev)=>
+    $el.on inputEvent, (ev)=>
+      @dragg(startX, ev.pageX, slideToPos)
 
-      offsetX = startX - ev.pageX # Difference between the new mouse x pos and the previus one
 
-      startX = ev.pageX
+  dragg: (startX, currentX, slideToPos) =>
+    offsetX = startX - currentX # Difference between the new mouse x pos and the previus one
 
-      @slideToPos -= offsetX
+    slideToPos -= offsetX
 
-      # Refactor below asap
+    # Refactor below asap
 
-      if @slideToPos >= 0
-        @slideToPos = 0
-        @isOutBounds = yes
-        @dragStartX = startX
-        unless @hasLimitClass
-          @$sliderViewport.addClass('onLeftLimit')
-          @hasLimitClass = yes
+    if slideToPos >= 0
+      slideToPos = 0
+      @isOutBounds = yes
+      @dragStartX = currentX
 
-      else if @slideToPos <= -@rightLimit
-        @slideToPos = -@rightLimit
-        @isOutBounds = yes
-        @dragStartX = startX
-        unless @hasLimitClass
-          @$sliderViewport.addClass('onRightLimit')
-          @hasLimitClass = yes
+      unless @hasLimitClass
+        @$sliderViewport.addClass('onLeftLimit')
+        @hasLimitClass = yes
 
-      dragPos = (@slideToPos / @viewPortWidth) * 100
+    else if slideToPos <= -@rightLimit
+      slideToPos = -@rightLimit
+      @isOutBounds = yes
+      @dragStartX = currentX
 
-      #@$slider.css('left', @slideToPos + 'px') Deprecated px drag
-      @$slider.css('left', dragPos + '%')
-      @isOutBounds = no
-      ###
-      We should use a better way to move the elements around, using forced gpu calcs
-      @$slider.css({
-        '-webkit-transform': "translate3d(#{@slideToPos}%, 0px, 0px) perspective(2000px)"
-      })
-      ###
-      null
+      unless @hasLimitClass
+        @$sliderViewport.addClass('onRightLimit')
+        @hasLimitClass = yes
 
-  dragEnd: (e)->
+    dragPos = (slideToPos / @viewPortWidth) * 100
+
+    #@$slider.css('left', slideToPos + 'px') Deprecated px drag
+    @$slider.css('left', dragPos + '%')
+    @isOutBounds = no
+    ###
+    We should use a better way to move the elements around, using forced gpu calcs
+    @$slider.css({
+      '-webkit-transform': "translate3d(#{slideToPos}%, 0px, 0px) perspective(2000px)"
+    })
+    ###
+    null
+
+  dragEnd: (currentX)->
     if @draggedEl or @clicked #not working, always null :S
       console.log 'drag end event fired for ' + @sliderId
       console.log @draggedEl
@@ -190,7 +197,7 @@ class Slider
         @$sliderViewport.removeClass('onLeftLimit onRightLimit')
         @hasLimitClass = no
 
-      offsetX = @dragStartX - e.pageX
+      offsetX = @dragStartX - currentX
       offsetPercentage = Math.abs (offsetX / @viewPortWidth)
       minToAction = 0.1 # The user must have dragged the slider at least 10% to move it
       if offsetPercentage < minToAction then offsetPercentage = 0
@@ -266,13 +273,13 @@ class Slider
         return false
 
     console.log 'index:' + @index
-    @slideToPos = -1 * (@index * 100)
+    slideToPos = -1 * (@index * 100)
     if(@settings.navigator)
       @$sliderNavBtns.removeClass 'selectedBullet'
       $(@$sliderNavBtns[@index]).addClass 'selectedBullet'
 
     @$slider.css
-      'left': "#{@slideToPos}%"
+      'left': "#{slideToPos}%"
       'transition-duration': "#{@settings.duration}s"
 
     if(@settings.emmitEvents)
