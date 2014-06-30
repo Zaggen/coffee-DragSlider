@@ -1,4 +1,4 @@
-root = window ? global # no need for node.js global in a slider but w/e
+root = window
 root.sliders = {}
 $ = root.jQuery
 
