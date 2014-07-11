@@ -23,7 +23,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    background-color: rgba(187, 187, 187, 0.54);
+    background-color: rgb(255, 82, 0);
     box-shadow: 0px 0 5px #d3d3d3;
 }
 
@@ -43,14 +43,6 @@
     margin-left: 0;
     top: 0;
     left: 0;
-}
-
-.transition_1sec {
-    -webkit-transition: all 1s;
-    -moz-transition: all 1s;
-    -o-transition: all 1s;
-    -ms-transition: all 1s;
-    transition: all 1s;
 }
 
 .sliderViewport .slider > li {

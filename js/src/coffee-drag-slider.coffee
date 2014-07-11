@@ -9,7 +9,7 @@ class Slider
       viewportMaxHeight: config.viewportMaxHeight ? 500
     #slideShow:         config.slideShow ? yes # Not implemented yet
     #stopOnHover:       config.stopOnHover ? yes # Not implemented yet
-    #cycle:             config.cycle ? yes # Not implemented yet
+      cycle:             config.cycle ? yes # Not implemented yet
       navigator:         config.navigator ? yes
       navigatorEvents:   config.navigatorEvents ? no
       autoHideBtns:      config.autoHideBtns ? yes # Not implemented yet
@@ -69,7 +69,6 @@ class Slider
       @$sliderViewport.on 'touchstart', (e)=>
         e = e.originalEvent
         x = e.touches[0].pageX
-        e.stopPropagation()
         @draggedEl = e.currentTarget
         @dragStart(x, 'touchmove')
         null
@@ -84,9 +83,10 @@ class Slider
         e.preventDefault()
         @dragEnd(e.pageX)
 
-      $(document).on 'touchend',(e)=>
-        e = e.originalEvent.touches[0]
-        @dragEnd(e.pageX)
+      @$sliderViewport.on 'touchend',(e)=>
+        #not working
+        x = e.originalEvent.touches[0].pageX
+        @dragEnd(x)
 
     $( window ).resize =>
       @setSlider()
@@ -285,6 +285,4 @@ class Slider
       $.event.trigger('onSlide', [@index, @sliderId]);
 
 $ ->
-  sliders.main = new Slider 'mainSlider',
-    autoHideBtns: yes
-    emmitEvents: yes
+  sliders.main = new Slider 'mainSlider'
