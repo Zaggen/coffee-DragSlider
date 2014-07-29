@@ -5,17 +5,18 @@ class Slider
   constructor:(@sliderId, config = {})->
 
     @settings =
-      viewportMaxWidth:  config.viewportMaxWidth ? 1000
-      viewportMaxHeight: config.viewportMaxHeight ? 500
+    #viewportMaxWidth:  config.viewportMaxWidth ? 1000
+    #viewportMaxHeight: config.viewportMaxHeight ? 500
     #slideShow:         config.slideShow ? yes # Not implemented yet
     #stopOnHover:       config.stopOnHover ? yes # Not implemented yet
       cycle:             config.cycle ? yes # Not implemented yet
       navigator:         config.navigator ? yes
       navigatorEvents:   config.navigatorEvents ? no
-      autoHideBtns:      config.autoHideBtns ? yes # Not implemented yet
+    #autoHideBtns:      config.autoHideBtns ? yes # Not implemented yet
       duration:          config.duration ? 1 # In seconds
       emmitEvents:       config.emmitEvents ? no
       draggable:         config.draggable ? yes
+      centerImages:      config.centerImages ? yes
     #preventLinksOnDrag:config.allowLinks ? yes
 
     #jQuery Objects
@@ -24,7 +25,6 @@ class Slider
     @$sliderItems      = $ @$slider.children('li')
     @$sliderPrevBtn    = $ @$sliderViewport.children('.prevBtn')
     @$sliderNextBtn    = $ @$sliderViewport.children('.nextBtn')
-    @$sliderNavBtns    = $ @$sliderViewport.children('.navigator').children()
 
     # In order to prevent any other link event handler to activate first we find the childrens and use those to
     # stop and Immediate Propagation of the event
@@ -91,33 +91,24 @@ class Slider
     $( window ).resize =>
       @setSlider()
 
-  ###
-  Not Working yet :S
-  if @settings.preventLinksOnDrag
-
-    @$sliderLinks.click (e)=>
-      e.stopImmediatePropagation()
-      e.preventDefault()
-      if @draggedEl
-        alert 'yep it was dragged'
-        @draggedEl = null
-        console.log '@draggedEl is ' + @draggedEl
-      else
-        alert 'nopes'
-  ###
 
   addNavigator: ->
     navigatorHtml = '<ul class="navigator">';
     navigatorHtml += '<li class="navBullet selectedBullet"></li>'; # First item, already selected
     navigatorHtml += '<li class="navBullet"></li>' for i in [1...@elementsQ]
     navigatorHtml += '</ul>'
-    @$sliderViewport.append(navigatorHtml)
 
-    if @settings.navigatorInParent
-      @$sliderNavBtns    = $ @$sliderViewport.parent().find('.navigator a')
-    else
-      @$sliderNavBtns    = $ @$sliderViewport.children('.navigator').children()
+    @$sliderNavBtns = @$sliderViewport
+    .append(navigatorHtml)
+    .children('.navigator')
+    .children()
 
+  addLoader: ($el)->
+    loaderHtml = '<div class="progress"><div></div></div>'
+    $el.append(loaderHtml)
+
+  removeLoader: ($el)->
+    $el.find('.progress').remove()
 
   setSlider: ->
     @viewPortWidth = @$sliderViewport.width()
@@ -131,9 +122,43 @@ class Slider
       'width': "#{@sliderWidth}%"
       'transition-duration': "#{@settings.duration}s"
 
+    @setImages()
+
+    if not @$sliderNavBtns? then @addNavigator()
+
+  # Centers images in the slider item (li) verticaly and horizontally.
+  # Caveats: Assumes the images are fully loaded, and if not it might not center the image properly, must be
+  # refactored to take this into account
+  setImages: ->
+    _self = @
+    @$sliderItems.each ->
+      $el = $(this)
+      _self.addLoader($el)
+
+    @setImage()
+
+  setImage: (index = 0)->
+    if index < @$sliderItems.length
+      $el = $( @$sliderItems.get(index) )
+      $childImg = $( $el.find('img') )
+      src = $childImg.data('src')
+      $childImg
+      .attr('src', src)
+      .css('display', 'none')
+
+      $childImg.load =>
+        if @.settings.centerImages then @.centerImage($childImg)
+        $childImg.css('display','block')
+        @removeLoader($el)
+        @setImage(++index)
 
 
-    @addNavigator()
+  centerImage: ($img)->
+    leftOffset = -$img.outerWidth() / 2 + 'px'
+    topOffset = -$img.outerHeight() / 2 + 'px'
+    $img.css
+      'margin-top': topOffset
+      'margin-left': leftOffset
 
   dragStart: (startX, inputEvent = 'mousemove')->
     $el = $ @draggedEl
