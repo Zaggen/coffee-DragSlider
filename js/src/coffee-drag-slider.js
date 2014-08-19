@@ -9,29 +9,26 @@
 
   Slider = (function() {
     function Slider(sliderId, config) {
-      var _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8;
+      var _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
       this.sliderId = sliderId;
       if (config == null) {
         config = {};
       }
       this.dragg = __bind(this.dragg, this);
       this.settings = {
-        viewportMaxWidth: (_ref = config.viewportMaxWidth) != null ? _ref : 1000,
-        viewportMaxHeight: (_ref1 = config.viewportMaxHeight) != null ? _ref1 : 500,
-        cycle: (_ref2 = config.cycle) != null ? _ref2 : true,
-        navigator: (_ref3 = config.navigator) != null ? _ref3 : true,
-        navigatorEvents: (_ref4 = config.navigatorEvents) != null ? _ref4 : false,
-        autoHideBtns: (_ref5 = config.autoHideBtns) != null ? _ref5 : true,
-        duration: (_ref6 = config.duration) != null ? _ref6 : 1,
-        emmitEvents: (_ref7 = config.emmitEvents) != null ? _ref7 : false,
-        draggable: (_ref8 = config.draggable) != null ? _ref8 : true
+        cycle: (_ref = config.cycle) != null ? _ref : true,
+        navigator: (_ref1 = config.navigator) != null ? _ref1 : true,
+        navigatorEvents: (_ref2 = config.navigatorEvents) != null ? _ref2 : false,
+        duration: (_ref3 = config.duration) != null ? _ref3 : 1,
+        emmitEvents: (_ref4 = config.emmitEvents) != null ? _ref4 : false,
+        draggable: (_ref5 = config.draggable) != null ? _ref5 : true,
+        centerImages: (_ref6 = config.centerImages) != null ? _ref6 : true
       };
       this.$sliderViewport = $('#' + sliderId);
       this.$slider = $(this.$sliderViewport.children('.slider'));
       this.$sliderItems = $(this.$slider.children('li'));
       this.$sliderPrevBtn = $(this.$sliderViewport.children('.prevBtn'));
       this.$sliderNextBtn = $(this.$sliderViewport.children('.nextBtn'));
-      this.$sliderNavBtns = $(this.$sliderViewport.children('.navigator').children());
       if (this.settings.preventLinksOnDrag) {
         this.$sliderLinks = this.$sliderItems.children().children();
       }
@@ -40,6 +37,10 @@
       this.slideToPos = 0;
       this.draggedEl = null;
       this.hasLimitClass = false;
+      this.setListeners();
+    }
+
+    Slider.prototype.setListeners = function() {
       this.$sliderPrevBtn.click((function(_this) {
         return function(e) {
           e.stopPropagation();
@@ -95,28 +96,14 @@
           };
         })(this));
       }
-      $(window).resize((function(_this) {
+      return $(window).resize((function(_this) {
         return function() {
-          return _this.setSlider();
+          return setTimeout(function() {
+            return _this.setSlider();
+          }, 1);
         };
       })(this));
-    }
-
-
-    /*
-    Not Working yet :S
-    if @settings.preventLinksOnDrag
-    
-      @$sliderLinks.click (e)=>
-        e.stopImmediatePropagation()
-        e.preventDefault()
-        if @draggedEl
-          alert 'yep it was dragged'
-          @draggedEl = null
-          console.log '@draggedEl is ' + @draggedEl
-        else
-          alert 'nopes'
-     */
+    };
 
     Slider.prototype.addNavigator = function() {
       var i, navigatorHtml, _i, _ref;
@@ -126,12 +113,17 @@
         navigatorHtml += '<li class="navBullet"></li>';
       }
       navigatorHtml += '</ul>';
-      this.$sliderViewport.append(navigatorHtml);
-      if (this.settings.navigatorInParent) {
-        return this.$sliderNavBtns = $(this.$sliderViewport.parent().find('.navigator a'));
-      } else {
-        return this.$sliderNavBtns = $(this.$sliderViewport.children('.navigator').children());
-      }
+      return this.$sliderNavBtns = this.$sliderViewport.append(navigatorHtml).children('.navigator').children();
+    };
+
+    Slider.prototype.addLoader = function($el) {
+      var loaderHtml;
+      loaderHtml = '<div class="progress"><div></div></div>';
+      return $el.append(loaderHtml);
+    };
+
+    Slider.prototype.removeLoader = function($el) {
+      return $el.find('.progress').remove();
     };
 
     Slider.prototype.setSlider = function() {
@@ -139,14 +131,61 @@
       this.viewPortWidth = this.$sliderViewport.width();
       this.elementsQ = this.$sliderItems.length;
       this.sliderWidth = this.elementsQ * 100;
-      sliderItemWidth = 100 / this.elementsQ;
+      this.percentageStep = sliderItemWidth = 100 / this.elementsQ;
       this.rightLimit = (this.viewPortWidth * this.elementsQ) - this.viewPortWidth;
       this.$sliderItems.css('width', "" + sliderItemWidth + "%");
       this.$slider.css({
         'width': "" + this.sliderWidth + "%",
         'transition-duration': "" + this.settings.duration + "s"
       });
-      return this.addNavigator();
+      this.setImages();
+      if (this.$sliderNavBtns == null) {
+        return this.addNavigator();
+      }
+    };
+
+    Slider.prototype.setImages = function() {
+      var _self;
+      _self = this;
+      this.$sliderItems.each(function() {
+        var $el;
+        $el = $(this);
+        return _self.addLoader($el);
+      });
+      return this.setImage();
+    };
+
+    Slider.prototype.setImage = function(index) {
+      var $childImg, $el, src;
+      if (index == null) {
+        index = 0;
+      }
+      if (index < this.$sliderItems.length) {
+        $el = $(this.$sliderItems.get(index));
+        $childImg = $($el.find('img'));
+        src = $childImg.data('src');
+        $childImg.attr('src', src).css('display', 'none');
+        return $childImg.load((function(_this) {
+          return function() {
+            if (_this.settings.centerImages) {
+              _this.centerImage($childImg);
+            }
+            $childImg.css('display', 'block');
+            _this.removeLoader($el);
+            return _this.setImage(++index);
+          };
+        })(this));
+      }
+    };
+
+    Slider.prototype.centerImage = function($img) {
+      var leftOffset, topOffset;
+      leftOffset = -$img.outerWidth() / 2 + 'px';
+      topOffset = -$img.outerHeight() / 2 + 'px';
+      return $img.css({
+        'margin-top': topOffset,
+        'margin-left': leftOffset
+      });
     };
 
     Slider.prototype.dragStart = function(startX, inputEvent) {
@@ -159,7 +198,6 @@
       slideToPos = this.$slider.position().left;
       dragPos = (slideToPos / this.viewPortWidth) * 100;
       this.$slider.css({
-        'left': "" + dragPos + "%",
         'transition-duration': '0s'
       });
       return $el.on(inputEvent, (function(_this) {
@@ -194,15 +232,9 @@
         }
       }
       dragPos = (slideToPos / this.viewPortWidth) * 100;
-      this.$slider.css('left', dragPos + '%');
+      dragPos = dragPos * (this.percentageStep / 100);
+      this.$slider.css('transform', "translate3d(" + dragPos + "%, 0, 0)");
       this.isOutBounds = false;
-
-      /*
-      We should use a better way to move the elements around, using forced gpu calcs
-      @$slider.css({
-        '-webkit-transform': "translate3d(#{slideToPos}%, 0px, 0px) perspective(2000px)"
-      })
-       */
       return null;
     };
 
@@ -290,13 +322,13 @@
         }
       }
       console.log('index:' + this.index);
-      slideToPos = -1 * (this.index * 100);
+      slideToPos = -1 * (this.index * this.percentageStep);
       if (this.settings.navigator) {
         this.$sliderNavBtns.removeClass('selectedBullet');
         $(this.$sliderNavBtns[this.index]).addClass('selectedBullet');
       }
       this.$slider.css({
-        'left': "" + slideToPos + "%",
+        'transform': "translate3d(" + slideToPos + "%, 0, 0)",
         'transition-duration': "" + this.settings.duration + "s"
       });
       if (this.settings.emmitEvents) {

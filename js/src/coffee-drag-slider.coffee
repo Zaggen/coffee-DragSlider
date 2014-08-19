@@ -39,9 +39,9 @@ class Slider
     @draggedEl = null
     @hasLimitClass = false
 
+    @setListeners()
 
-    ## Listeners
-
+  setListeners: ->
     @$sliderPrevBtn.click (e)=>
       e.stopPropagation()
       @slideTo('prev')
@@ -89,7 +89,9 @@ class Slider
         @dragEnd(x)
 
     $( window ).resize =>
-      @setSlider()
+      setTimeout =>
+        @setSlider()
+      , 1
 
 
   addNavigator: ->
@@ -110,11 +112,12 @@ class Slider
   removeLoader: ($el)->
     $el.find('.progress').remove()
 
+
   setSlider: ->
     @viewPortWidth = @$sliderViewport.width()
     @elementsQ = @$sliderItems.length
     @sliderWidth = @elementsQ * 100
-    sliderItemWidth = 100 / @elementsQ
+    @percentageStep = sliderItemWidth = 100 / @elementsQ
     @rightLimit = (@viewPortWidth * @elementsQ) - @viewPortWidth #
     @$sliderItems.css 'width', "#{sliderItemWidth}%"
 
@@ -166,8 +169,8 @@ class Slider
     slideToPos = @$slider.position().left
     dragPos = (slideToPos / @viewPortWidth) * 100
 
+
     @$slider.css
-      'left': "#{dragPos}%"
       'transition-duration': '0s' # We are doing direct manipulation, no need for transitions here
 
     $el.on inputEvent, (ev)=>
@@ -201,16 +204,11 @@ class Slider
         @hasLimitClass = yes
 
     dragPos = (slideToPos / @viewPortWidth) * 100
+    dragPos = dragPos * (@percentageStep / 100)
 
-    #@$slider.css('left', slideToPos + 'px') Deprecated px drag
-    @$slider.css('left', dragPos + '%')
+    @$slider.css('transform', "translate3d(#{dragPos}%, 0, 0)")
     @isOutBounds = no
-    ###
-    We should use a better way to move the elements around, using forced gpu calcs
-    @$slider.css({
-      '-webkit-transform': "translate3d(#{slideToPos}%, 0px, 0px) perspective(2000px)"
-    })
-    ###
+
     null
 
   dragEnd: (currentX)->
@@ -297,13 +295,13 @@ class Slider
         return false
 
     console.log 'index:' + @index
-    slideToPos = -1 * (@index * 100)
+    slideToPos = -1 * (@index * @percentageStep)
     if(@settings.navigator)
       @$sliderNavBtns.removeClass 'selectedBullet'
       $(@$sliderNavBtns[@index]).addClass 'selectedBullet'
 
     @$slider.css
-      'left': "#{slideToPos}%"
+      'transform': "translate3d(#{slideToPos}%, 0, 0)"
       'transition-duration': "#{@settings.duration}s"
 
     if(@settings.emmitEvents)
