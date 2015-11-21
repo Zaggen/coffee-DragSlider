@@ -1,44 +1,48 @@
 window.sliders = {}
 $ = window.jQuery
 
+defaults =
+  #viewportMaxWidth:  1000
+  #viewportMaxHeight: 500
+  slideShow:         false
+  #stopOnHover:      yes # Not implemented yet
+  cycle:           yes
+  useNavigator:    yes
+  addNavigator:     yes
+  navigatorEvents:   no
+  addBtns:    yes # Use false, when you want to manually add btns
+  autoHideBtns:    yes # Not implemented yet
+  duration:       1 # In seconds
+  emmitEvents:  no
+  draggable:  yes
+  #preventLinksOnDrag:config.allowLinks ? yes
+
 class Slider
-  constructor:(@sliderId, config = {})->
-
-    @settings =
-    #viewportMaxWidth:  config.viewportMaxWidth ? 1000
-    #viewportMaxHeight: config.viewportMaxHeight ? 500
-    #slideShow:         config.slideShow ? yes # Not implemented yet
-    #stopOnHover:       config.stopOnHover ? yes # Not implemented yet
-      cycle:             config.cycle ? yes # Not implemented yet
-      navigator:         config.navigator ? yes
-      navigatorEvents:   config.navigatorEvents ? no
-    #autoHideBtns:      config.autoHideBtns ? yes # Not implemented yet
-      duration:          config.duration ? 1 # In seconds
-      emmitEvents:       config.emmitEvents ? no
-      draggable:         config.draggable ? yes
-      centerImages:      config.centerImages ? yes
-    #preventLinksOnDrag:config.allowLinks ? yes
-
+  constructor:(slider)->
     #jQuery Objects
-    @$sliderViewport   = $('#' + sliderId)
-    @$slider           = $ @$sliderViewport.children('.slider')
-    @$sliderItems      = $ @$slider.children('li')
-    @$sliderPrevBtn    = $ @$sliderViewport.children('.prevBtn')
-    @$sliderNextBtn    = $ @$sliderViewport.children('.nextBtn')
+    @$el = $(slider)
+    @$sliderViewport   = $(@$el.find('.sliderViewport'))
+    @$sliderTrack           = $(@$sliderViewport.children('.sliderTrack'))
+    @$sliderTrackItems      = $(@$sliderTrack.children('li'))
+    @$sliderPrevBtn    = $(@$sliderViewport.children('.prevBtn'))
+    @$sliderNextBtn    = $(@$sliderViewport.children('.nextBtn'))
+
+    config = @$el.data('slider')
+    @settings = $.extend({}, defaults, config)
 
     # In order to prevent any other link event handler to activate first we find the childrens and use those to
     # stop and Immediate Propagation of the event
     if @settings.preventLinksOnDrag
-      @$sliderLinks = @$sliderItems.children().children()
+      @$sliderTrackLinks = @$sliderTrackItems.children().children()
 
     #Slider sizing variables and settings
-
-    @setSlider()
+    @_setSlider()
     @index = 0
     @slideToPos = 0
-    @draggedEl = null
+    @_draggedEl = null
     @hasLimitClass = false
 
+    @slideTo(0)
     @setListeners()
 
   setListeners: ->
@@ -50,9 +54,14 @@ class Slider
       e.stopPropagation()
       @slideTo('next')
 
+    if @settings.slideShow
+      setInterval =>
+        @slideTo('next')
+      , 12000
+
     # Navigator Bullets
 
-    @$sliderNavBtns.mousedown (e)=>
+    @$navigator.on 'mousedown', 'li', (e)=>
       e.stopPropagation()
       index = $(e.currentTarget).index()
       @slideTo(index)
@@ -62,124 +71,141 @@ class Slider
       @$sliderViewport.on 'mousedown', (e)=>
         e.stopPropagation()
         e.preventDefault()
-        @draggedEl = e.currentTarget
-        @dragStart(e.pageX)
+        @_draggedEl = e.currentTarget
+        @_dragStart(e.pageX)
         null
 
       @$sliderViewport.on 'touchstart', (e)=>
         e = e.originalEvent
         x = e.touches[0].pageX
-        @draggedEl = e.currentTarget
-        @dragStart(x, 'touchmove')
+        @_draggedEl = e.currentTarget
+        @_dragStart(x, 'touchmove')
         null
 
       # Removes mousemove ev when the mouse is up anywhere in
       # the doc using the ev target stored in the mousedow ev
-      # if @dragStartX means the current object called by the handler
+      # if @_dragStartX means the current object called by the handler
       # did not started the mousedown event so we skip it
 
       $(document).on 'mouseup',(e)=>
         e.stopPropagation()
         e.preventDefault()
-        @dragEnd(e.pageX)
+        @_dragEnd(e.pageX)
 
       @$sliderViewport.on 'touchend',(e)=>
         #not working
         x = e.originalEvent.touches[0].pageX
-        @dragEnd(x)
+        @_dragEnd(x)
 
     $( window ).resize =>
+      #TODO: This seems like a bad idea, or at least an incomplete one
       setTimeout =>
-        @setSlider()
+        @_setSlider()
       , 1
 
+  # Slider SetUp methods
 
-  addNavigator: ->
+  _buildNavigator: ->
     navigatorHtml = '<ul class="navigator">';
-    navigatorHtml += '<li class="navBullet selectedBullet"></li>'; # First item, already selected
-    navigatorHtml += '<li class="navBullet"></li>' for i in [1...@elementsQ]
+    navigatorHtml +=  '<li class="navBullet selectedBullet"></li>'; # First item, already selected
+    navigatorHtml +=  '<li class="navBullet"></li>' for i in [1...@elementsQ]
     navigatorHtml += '</ul>'
 
-    @$sliderNavBtns = @$sliderViewport
-    .append(navigatorHtml)
-    .children('.navigator')
-    .children()
+    @$sliderViewport.append(navigatorHtml)
 
-  addLoader: ($el)->
+  _addBtns: ->
+    btnsHtml  =  '<div class="sliderBtn prevBtn"><i class="fa fa-angle-left"></i></div>';
+    btnsHtml +=  '<div class="sliderBtn nextBtn"><i class="fa fa-angle-right"></i></div>';
+    @$sliderViewport.prepend(btnsHtml)
+    @$sliderPrevBtn    = $(@$sliderViewport.children('.prevBtn'))
+    @$sliderNextBtn    = $(@$sliderViewport.children('.nextBtn'))
+
+  _addLoader: ($el)->
     loaderHtml = '<div class="progress"><div></div></div>'
     $el.append(loaderHtml)
 
-  removeLoader: ($el)->
+  _removeLoader: ($el)->
     $el.find('.progress').remove()
 
-
-  setSlider: ->
+  _setSlider: ->
     @viewPortWidth = @$sliderViewport.width()
-    @elementsQ = @$sliderItems.length
+    @elementsQ = @$sliderTrackItems.length
     @sliderWidth = @elementsQ * 100
-    @percentageStep = sliderItemWidth = 100 / @elementsQ
+    @percentageStep = sliderTrackItemWidth = 100 / @elementsQ
     @rightLimit = (@viewPortWidth * @elementsQ) - @viewPortWidth #
-    @$sliderItems.css 'width', "#{sliderItemWidth}%"
+    @$sliderTrackItems.css 'width', "#{sliderTrackItemWidth}%"
 
-    @$slider.css
+    @$sliderTrack.css
       'width': "#{@sliderWidth}%"
       'transition-duration': "#{@settings.duration}s"
 
-    @setImages()
+    @_lazyLoadImages()
 
-    if not @$sliderNavBtns? then @addNavigator()
+    if @settings.addBtns
+      @_addBtns()
 
-  # Centers images in the slider item (li) verticaly and horizontally.
-  # Caveats: Assumes the images are fully loaded, and if not it might not center the image properly, must be
-  # refactored to take this into account
-  setImages: ->
-    _self = @
-    @$sliderItems.each ->
-      $el = $(this)
-      _self.addLoader($el)
+    unless @settings.autoHideBtns
+      @$sliderPrevBtn.css('opacity', '1')
+      @$sliderNextBtn.css('opacity', '1')
 
-    @setImage()
+    unless @$navigator?
+      if @settings.addNavigator
+        @_buildNavigator()
+      if @settings.useNavigator
+        @$navigator = $(@$el.find('.navigator'))
 
-  setImage: (index = 0)->
-    if index < @$sliderItems.length
-      $el = $( @$sliderItems.get(index) )
-      $childImg = $( $el.find('img') )
-      src = $childImg.data('src')
-      $childImg
+  # Will lazy-load (sequentially) all the images with data-src attribute,
+  # the ones that do not define this attribute will be loaded by the browser
+  # in the default fashion. You can have the first one with out data-src and the
+  # rest with it, so the first one loads as soon as possible, and the rest starts to
+  # queue as soon as this code is run
+  _lazyLoadImages: ->
+    imagesToLazyLoad = @$sliderTrack.find('img[data-src]')
+    @_lazyLoadImage(imagesToLazyLoad, 0)
+
+  _lazyLoadImage: (images, index)->
+    if index <= images.length
+      $img = $(images[index])
+      src = $img.data('src')
+      $slide = $($img.parent())
+
+      $img.one 'load', ()=>
+        $img.css('display', 'block')
+        @_lazyLoadImage(images, ++index)
+        @_removeLoader($slide)
+
+      @_addLoader($slide)
+      $img
       .attr('src', src)
       .css('display', 'none')
 
-      $childImg.load =>
-        if @.settings.centerImages then @.centerImage($childImg)
-        $childImg.css('display','block')
-        @removeLoader($el)
-        @setImage(++index)
+  #TODO: Check to see if using an image has performance
+  _addLoader: ($el)->
+    loaderHtml = '<div class="progress"><div></div></div>'
+    $el.append(loaderHtml)
+
+  _removeLoader: ($el)->
+    $el.find('.progress').remove()
+
+  # Behavior methods
+
+  _dragStart: (startX, inputEvent = 'mousemove')->
+    $el = $ @_draggedEl
+    @_dragStartX = startX
+    slideToPos = @$sliderTrack.position().left
+    #dragPos = (slideToPos / @viewPortWidth) * 100
 
 
-  centerImage: ($img)->
-    leftOffset = -$img.outerWidth() / 2 + 'px'
-    topOffset = -$img.outerHeight() / 2 + 'px'
-    $img.css
-      'margin-top': topOffset
-      'margin-left': leftOffset
-
-  dragStart: (startX, inputEvent = 'mousemove')->
-    $el = $ @draggedEl
-    @dragStartX = startX
-    slideToPos = @$slider.position().left
-    dragPos = (slideToPos / @viewPortWidth) * 100
-
-
-    @$slider.css
+    @$sliderTrack.css
       'transition-duration': '0s' # We are doing direct manipulation, no need for transitions here
 
     $el.on inputEvent, (ev)=>
       ev = ev.originalEvent
       x = if inputEvent is 'mousemove' then ev.pageX else ev.touches[0].pageX
-      @dragg(startX, x, slideToPos)
+      @_drag(startX, x, slideToPos)
 
 
-  dragg: (startX, currentX, slideToPos) =>
+  _drag: (startX, currentX, slideToPos) =>
     offsetX = startX - currentX # Difference between the new mouse x pos and the previus one
     slideToPos -= offsetX
 
@@ -188,7 +214,7 @@ class Slider
     if slideToPos >= 0
       slideToPos = 0
       @isOutBounds = yes
-      @dragStartX = currentX
+      @_dragStartX = currentX
 
       unless @hasLimitClass
         @$sliderViewport.addClass('onLeftLimit')
@@ -197,7 +223,7 @@ class Slider
     else if slideToPos <= -@rightLimit
       slideToPos = -@rightLimit
       @isOutBounds = yes
-      @dragStartX = currentX
+      @_dragStartX = currentX
 
       unless @hasLimitClass
         @$sliderViewport.addClass('onRightLimit')
@@ -206,22 +232,22 @@ class Slider
     dragPos = (slideToPos / @viewPortWidth) * 100
     dragPos = dragPos * (@percentageStep / 100)
 
-    @$slider.css('transform', "translate3d(#{dragPos}%, 0, 0)")
+    @$sliderTrack.css('transform', "translate3d(#{dragPos}%, 0, 0)")
     @isOutBounds = no
 
     null
 
-  dragEnd: (currentX)->
-    if @draggedEl or @clicked #not working, always null :S
-      console.log 'drag end event fired for ' + @sliderId
-      console.log @draggedEl
+  _dragEnd: (currentX)->
+    if @_draggedEl or @clicked #not working, always null :S
+      #console.log 'drag end event fired for ' + slider
+      console.log @_draggedEl
       if @hasLimitClass
         @$sliderViewport.removeClass('onLeftLimit onRightLimit')
         @hasLimitClass = no
 
-      offsetX = @dragStartX - currentX
+      offsetX = @_dragStartX - currentX
       offsetPercentage = Math.abs (offsetX / @viewPortWidth)
-      minToAction = 0.1 # The user must have dragged the slider at least 10% to move it
+      minToAction = 0.1 # The user must have dragged the sliderTrack at least 10% to move it
       if offsetPercentage < minToAction then offsetPercentage = 0
 
       if offsetX > 0 and not @isOutBounds
@@ -237,31 +263,31 @@ class Slider
       else
 
         ## Didn't move, or at least not much
-        console.log "Didn't move, or at least not much"
+        #console.log "Didn't move, or at least not much"
         tempIndex = @index
 
-      console.log "tempIndex:" + tempIndex
+      #console.log "tempIndex:" + tempIndex
       @slideTo(tempIndex)
 
       # if it goes beyond a certain percentage we use slideTo to move
       # to the next slide or we use it to center up the current one
-      $(@draggedEl).off('mousemove')
+      $(@_draggedEl).off('mousemove')
 
       #if not @settings.preventLinksOnDrag
-      @draggedEl = null
+      @_draggedEl = null
 
-      console.log @draggedEl
+      console.log @_draggedEl
       false
 
   ###
-  # Moves the slider to the prev, next, or an specific position based on the command argument
+  # Moves the sliderTrack to the prev, next, or an specific position based on the command argument
   # @param {string}|{integer} command
   # @return {void}
   ###
 
   slideTo: (command)->
     @clicked = null
-    console.log 'slideTo Called with argument:' + command
+    #console.log 'slideTo Called with argument:' + command
     switch command
       when 'next'
         @index++
@@ -294,18 +320,24 @@ class Slider
         @index = 0
         return false
 
-    console.log 'index:' + @index
+    #console.log 'index:' + @index
     slideToPos = -1 * (@index * @percentageStep)
-    if(@settings.navigator)
-      @$sliderNavBtns.removeClass 'selectedBullet'
-      $(@$sliderNavBtns[@index]).addClass 'selectedBullet'
 
-    @$slider.css
+    index = @index
+    if @$navigator?
+      @$navigator.each ->
+        $childrens = $($(@).children())
+        $childrens.removeClass('selected')
+        $($childrens[index]).addClass('selected')
+
+    @$sliderTrack.css
       'transform': "translate3d(#{slideToPos}%, 0, 0)"
       'transition-duration': "#{@settings.duration}s"
 
     if(@settings.emmitEvents)
-      $.event.trigger('onSlide', [@index, @sliderId]);
+      $.event.trigger('onSlide', [@index]);
 
 $ ->
-  sliders.main = new Slider 'mainSlider'
+  window.sliders = []
+  $('.slider').each ->
+    sliders.push(new Slider(this))
