@@ -83,15 +83,12 @@ html
 
 
     .container
-      .sliderViewport#mainSlider
-        .sliderBtn.prevBtn
-          i.fa.fa-angle-left
-        .sliderBtn.nextBtn
-          i.fa.fa-angle-right
-        ul.slider
-          li item-1
-          li item-2
-          li item-3
+      slider(data-slider='{"draggable": true, "cycle": true, "autoHideBtns": false}')
+        section.sliderViewport
+          ul.sliderTrack
+            li item-1
+            li item-2
+            li item-3
 
     script(src='//code.jquery.com/jquery-1.11.0.min.js')
     script(src='js/src/coffee-drag-slider.js')
