@@ -36,7 +36,7 @@ class Slider
       @$sliderTrackLinks = @$sliderTrackItems.children().children()
 
     #Slider sizing variables and settings
-    @_setSlider()
+    @_setSlider(true)
     @index = 0
     @slideToPos = 0
     @_draggedEl = null
@@ -100,10 +100,38 @@ class Slider
     $( window ).resize =>
       #TODO: This seems like a bad idea, or at least an incomplete one
       setTimeout =>
-        @_setSlider()
+        @_setSlider(false)
       , 1
 
   # Slider SetUp methods
+
+  _setSlider: (initialSetUp)->
+    @viewPortWidth = @$sliderViewport.width()
+    @elementsQ = @$sliderTrackItems.length
+    @sliderWidth = @elementsQ * 100
+    @percentageStep = sliderTrackItemWidth = 100 / @elementsQ
+    @rightLimit = (@viewPortWidth * @elementsQ) - @viewPortWidth #
+    @$sliderTrackItems.css 'width', "#{sliderTrackItemWidth}%"
+
+    @$sliderTrack.css
+      'width': "#{@sliderWidth}%"
+      'transition-duration': "#{@settings.duration}s"
+
+    if initialSetUp
+      @_sequentiallyLazyLoadResources()
+
+      if @settings.addBtns
+        @_addBtns()
+
+      unless @settings.autoHideBtns and $(window).width() > 1024
+        @$sliderPrevBtn.css('opacity', '1')
+        @$sliderNextBtn.css('opacity', '1')
+
+      unless @$navigator?
+        if @settings.addNavigator
+          @_buildNavigator()
+        if @settings.useNavigator
+          @$navigator = $(@$el.find('.navigator'))
 
   _buildNavigator: ->
     navigatorHtml = '<ul class="navigator">';
@@ -127,55 +155,28 @@ class Slider
   _removeLoader: ($el)->
     $el.find('.progress').remove()
 
-  _setSlider: ->
-    @viewPortWidth = @$sliderViewport.width()
-    @elementsQ = @$sliderTrackItems.length
-    @sliderWidth = @elementsQ * 100
-    @percentageStep = sliderTrackItemWidth = 100 / @elementsQ
-    @rightLimit = (@viewPortWidth * @elementsQ) - @viewPortWidth #
-    @$sliderTrackItems.css 'width', "#{sliderTrackItemWidth}%"
-
-    @$sliderTrack.css
-      'width': "#{@sliderWidth}%"
-      'transition-duration': "#{@settings.duration}s"
-
-    @_lazyLoadImages()
-
-    if @settings.addBtns
-      @_addBtns()
-
-    unless @settings.autoHideBtns
-      @$sliderPrevBtn.css('opacity', '1')
-      @$sliderNextBtn.css('opacity', '1')
-
-    unless @$navigator?
-      if @settings.addNavigator
-        @_buildNavigator()
-      if @settings.useNavigator
-        @$navigator = $(@$el.find('.navigator'))
-
   # Will lazy-load (sequentially) all the images with data-src attribute,
   # the ones that do not define this attribute will be loaded by the browser
   # in the default fashion. You can have the first one with out data-src and the
   # rest with it, so the first one loads as soon as possible, and the rest starts to
   # queue as soon as this code is run
-  _lazyLoadImages: ->
-    imagesToLazyLoad = @$sliderTrack.find('img[data-src]')
-    @_lazyLoadImage(imagesToLazyLoad, 0)
+  _sequentiallyLazyLoadResources: ->
+    resourcesToLazyLoad = @$sliderTrack.find('[data-src]')
+    @_lazyLoadResource(resourcesToLazyLoad, 0)
 
-  _lazyLoadImage: (images, index)->
-    if index <= images.length
-      $img = $(images[index])
-      src = $img.data('src')
-      $slide = $($img.parent())
+  _lazyLoadResource: (resources, index)->
+    if index <= resources.length
+      $resource = $(resources[index])
+      src = $resource.data('src')
+      $slide = $($resource.parent())
 
-      $img.one 'load', ()=>
-        $img.css('display', 'block')
-        @_lazyLoadImage(images, ++index)
+      $resource.one 'load', ()=>
+        $resource.css('display', 'block')
+        @_lazyLoadResource(resources, ++index)
         @_removeLoader($slide)
 
       @_addLoader($slide)
-      $img
+      $resource
       .attr('src', src)
       .css('display', 'none')
 
@@ -193,8 +194,6 @@ class Slider
     $el = $ @_draggedEl
     @_dragStartX = startX
     slideToPos = @$sliderTrack.position().left
-    #dragPos = (slideToPos / @viewPortWidth) * 100
-
 
     @$sliderTrack.css
       'transition-duration': '0s' # We are doing direct manipulation, no need for transitions here
@@ -266,7 +265,6 @@ class Slider
         #console.log "Didn't move, or at least not much"
         tempIndex = @index
 
-      #console.log "tempIndex:" + tempIndex
       @slideTo(tempIndex)
 
       # if it goes beyond a certain percentage we use slideTo to move
@@ -287,7 +285,6 @@ class Slider
 
   slideTo: (command)->
     @clicked = null
-    #console.log 'slideTo Called with argument:' + command
     switch command
       when 'next'
         @index++
@@ -305,7 +302,6 @@ class Slider
           console.error err
           return false
 
-
     lastIndx = (@elementsQ - 1)
     if @index > lastIndx
       if @settings.cycle
@@ -320,7 +316,6 @@ class Slider
         @index = 0
         return false
 
-    #console.log 'index:' + @index
     slideToPos = -1 * (@index * @percentageStep)
 
     index = @index

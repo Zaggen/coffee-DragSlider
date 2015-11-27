@@ -35,7 +35,7 @@
       if (this.settings.preventLinksOnDrag) {
         this.$sliderTrackLinks = this.$sliderTrackItems.children().children();
       }
-      this._setSlider();
+      this._setSlider(true);
       this.index = 0;
       this.slideToPos = 0;
       this._draggedEl = null;
@@ -110,10 +110,42 @@
       return $(window).resize((function(_this) {
         return function() {
           return setTimeout(function() {
-            return _this._setSlider();
+            return _this._setSlider(false);
           }, 1);
         };
       })(this));
+    };
+
+    Slider.prototype._setSlider = function(initialSetUp) {
+      var sliderTrackItemWidth;
+      this.viewPortWidth = this.$sliderViewport.width();
+      this.elementsQ = this.$sliderTrackItems.length;
+      this.sliderWidth = this.elementsQ * 100;
+      this.percentageStep = sliderTrackItemWidth = 100 / this.elementsQ;
+      this.rightLimit = (this.viewPortWidth * this.elementsQ) - this.viewPortWidth;
+      this.$sliderTrackItems.css('width', sliderTrackItemWidth + "%");
+      this.$sliderTrack.css({
+        'width': this.sliderWidth + "%",
+        'transition-duration': this.settings.duration + "s"
+      });
+      if (initialSetUp) {
+        this._sequentiallyLazyLoadResources();
+        if (this.settings.addBtns) {
+          this._addBtns();
+        }
+        if (!(this.settings.autoHideBtns && $(window).width() > 1024)) {
+          this.$sliderPrevBtn.css('opacity', '1');
+          this.$sliderNextBtn.css('opacity', '1');
+        }
+        if (this.$navigator == null) {
+          if (this.settings.addNavigator) {
+            this._buildNavigator();
+          }
+          if (this.settings.useNavigator) {
+            return this.$navigator = $(this.$el.find('.navigator'));
+          }
+        }
+      }
     };
 
     Slider.prototype._buildNavigator = function() {
@@ -146,57 +178,27 @@
       return $el.find('.progress').remove();
     };
 
-    Slider.prototype._setSlider = function() {
-      var sliderTrackItemWidth;
-      this.viewPortWidth = this.$sliderViewport.width();
-      this.elementsQ = this.$sliderTrackItems.length;
-      this.sliderWidth = this.elementsQ * 100;
-      this.percentageStep = sliderTrackItemWidth = 100 / this.elementsQ;
-      this.rightLimit = (this.viewPortWidth * this.elementsQ) - this.viewPortWidth;
-      this.$sliderTrackItems.css('width', sliderTrackItemWidth + "%");
-      this.$sliderTrack.css({
-        'width': this.sliderWidth + "%",
-        'transition-duration': this.settings.duration + "s"
-      });
-      this._lazyLoadImages();
-      if (this.settings.addBtns) {
-        this._addBtns();
-      }
-      if (!this.settings.autoHideBtns) {
-        this.$sliderPrevBtn.css('opacity', '1');
-        this.$sliderNextBtn.css('opacity', '1');
-      }
-      if (this.$navigator == null) {
-        if (this.settings.addNavigator) {
-          this._buildNavigator();
-        }
-        if (this.settings.useNavigator) {
-          return this.$navigator = $(this.$el.find('.navigator'));
-        }
-      }
+    Slider.prototype._sequentiallyLazyLoadResources = function() {
+      var resourcesToLazyLoad;
+      resourcesToLazyLoad = this.$sliderTrack.find('[data-src]');
+      return this._lazyLoadResource(resourcesToLazyLoad, 0);
     };
 
-    Slider.prototype._lazyLoadImages = function() {
-      var imagesToLazyLoad;
-      imagesToLazyLoad = this.$sliderTrack.find('img[data-src]');
-      return this._lazyLoadImage(imagesToLazyLoad, 0);
-    };
-
-    Slider.prototype._lazyLoadImage = function(images, index) {
-      var $img, $slide, src;
-      if (index <= images.length) {
-        $img = $(images[index]);
-        src = $img.data('src');
-        $slide = $($img.parent());
-        $img.one('load', (function(_this) {
+    Slider.prototype._lazyLoadResource = function(resources, index) {
+      var $resource, $slide, src;
+      if (index <= resources.length) {
+        $resource = $(resources[index]);
+        src = $resource.data('src');
+        $slide = $($resource.parent());
+        $resource.one('load', (function(_this) {
           return function() {
-            $img.css('display', 'block');
-            _this._lazyLoadImage(images, ++index);
+            $resource.css('display', 'block');
+            _this._lazyLoadResource(resources, ++index);
             return _this._removeLoader($slide);
           };
         })(this));
         this._addLoader($slide);
-        return $img.attr('src', src).css('display', 'none');
+        return $resource.attr('src', src).css('display', 'none');
       }
     };
 
